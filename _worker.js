@@ -1,535 +1,508 @@
 /**
- * IP SENTINEL - ELITE EDITION
- * 仿 ipfighter 功能 / 赛博朋克 UI / 智能分流测试
+ * IP SENTINEL - ULTIMATE EDITION
+ * 修复版：无黑屏 / 全汉化 / 硬编码配置
  */
 
 export default {
   async fetch(request, env, ctx) {
-    const url = new URL(request.url);
-    
-    // 基础配置
-    const config = {
-      title: env.TITLE || "网络连接哨兵 | IP Sentinel",
-      footer: env.FOOTER || "SYSTEM ONLINE // SECURITY LEVEL: MAX",
-    };
-
-    // PWA 配置
-    if (url.pathname === "/manifest.json") {
-      return new Response(JSON.stringify({
-        "name": config.title,
-        "short_name": "Sentinel",
-        "display": "standalone",
-        "background_color": "#0b0c10",
-        "theme_color": "#0b0c10",
-        "icons": [{"src": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f6e1.png", "sizes": "72x72", "type": "image/png"}]
-      }), { headers: { "content-type": "application/json" }});
-    }
-
     // 获取 Cloudflare 头部信息
     const cf = request.cf || {};
     const headers = request.headers;
     const clientIp = headers.get("cf-connecting-ip") || headers.get("x-forwarded-for") || "127.0.0.1";
     
-    // 初始化数据
+    // 初始化数据 (安全默认值)
     const initData = {
       ip: clientIp,
-      country: cf.country || "UNK", 
+      country: cf.country || "未知", 
       city: cf.city || "未知城市",
       region: cf.region || "",
-      isp: cf.asOrganization || "ISP Unknown",
+      isp: cf.asOrganization || "未知运营商",
       asn: cf.asn ? "AS" + cf.asn : "N/A",
       lat: Number(cf.latitude) || 0,
       lon: Number(cf.longitude) || 0,
       colo: cf.colo || "UNK",
-      timezone: cf.timezone || "UTC",
       httpProtocol: cf.httpProtocol || "HTTP/2",
       tlsVersion: cf.tlsVersion || "TLS 1.3",
-      userAgent: headers.get("user-agent") || ""
+      userAgent: headers.get("user-agent") || "未知设备"
     };
 
-    return new Response(renderHtml(initData, config), {
-      headers: { 'content-type': 'text/html;charset=UTF-8' },
+    // PWA Manifest (硬编码配置)
+    const url = new URL(request.url);
+    if (url.pathname === "/manifest.json") {
+      return new Response(JSON.stringify({
+        "name": "IP 哨兵",
+        "short_name": "IP Sentinel",
+        "display": "standalone",
+        "background_color": "#050505",
+        "theme_color": "#050505",
+        "icons": [{
+          "src": "https://cdn-icons-png.flaticon.com/512/9662/9662243.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }]
+      }), { headers: { "content-type": "application/json" }});
+    }
+
+    return new Response(renderHtml(initData), {
+      headers: { 
+        'content-type': 'text/html;charset=UTF-8',
+        'Cache-Control': 'no-cache' // 防止缓存导致旧版 JS 报错
+      },
     });
   },
 };
 
-function renderHtml(initData, config) {
+function renderHtml(initData) {
   return `
 <!DOCTYPE html>
 <html lang="zh-CN" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>${config.title}</title>
-    <meta name="theme-color" content="#0b0c10" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>IP 哨兵 | 网络监控中心</title>
+    <meta name="theme-color" content="#050505" />
     <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/9662/9662243.png" />
+    
+    <!-- 核心库 CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
     <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
     
     <script>
       window.CF_DATA = ${JSON.stringify(initData)};
-      window.SITE_CONFIG = ${JSON.stringify(config)};
+      
       tailwind.config = {
         darkMode: 'class',
         theme: {
           extend: {
-            fontFamily: { sans: ['Rajdhani', 'Noto Sans SC', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
+            fontFamily: { sans: ['Noto Sans SC', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
             colors: { 
-              bg: '#0b0c10', panel: '#1f2833', 
-              neon: { cyan: '#66fcf1', blue: '#45a29e', green: '#39ff14', red: '#ff073a', gold: '#ffd700' }
-            },
-            animation: { 'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite' }
+              bg: '#050505', 
+              panel: '#111318', 
+              accent: '#00f2ea', // 赛博青
+              danger: '#ff2a6d', // 赛博红
+              success: '#05d5fa', // 亮蓝
+              warning: '#f5d300', // 赛博黄
+            }
           }
         }
       }
     </script>
     <style>
-      body { background-color: #0b0c10; color: #c5c6c7; -webkit-font-smoothing: antialiased; }
+      body { background-color: #050505; color: #e0e0e0; overflow-x: hidden; }
       
-      /* HUD 风格卡片 */
-      .hud-card {
-        background: rgba(31, 40, 51, 0.6);
-        backdrop-filter: blur(16px);
-        border: 1px solid rgba(69, 162, 158, 0.2);
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-        position: relative; overflow: hidden;
-      }
-      .hud-card::before {
-        content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px;
-        background: linear-gradient(90deg, transparent, #66fcf1, transparent); opacity: 0.5;
+      /* 玻璃拟态卡片 */
+      .cyber-card {
+        background: rgba(17, 19, 24, 0.7);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 0 15px rgba(0, 242, 234, 0.05);
+        position: relative;
+        overflow: hidden;
       }
       
-      /* 仪表盘动画 */
+      /* 扫描线动画 */
+      .scan-line {
+        position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+        background: linear-gradient(90deg, transparent, #00f2ea, transparent);
+        opacity: 0.3;
+        animation: scan 3s linear infinite;
+        pointer-events: none;
+      }
+      @keyframes scan { 0% { top: -10%; } 100% { top: 110%; } }
+
+      /* 地图滤镜 */
+      .map-filter { filter: invert(1) grayscale(1) brightness(0.7) contrast(1.2); }
+      
+      /* 仪表盘圆环 */
       .gauge-circle { transition: stroke-dashoffset 1s ease-in-out; transform: rotate(-90deg); transform-origin: 50% 50%; }
       
       /* 滚动条 */
-      ::-webkit-scrollbar { width: 6px; }
-      ::-webkit-scrollbar-track { background: #0b0c10; }
-      ::-webkit-scrollbar-thumb { background: #45a29e; border-radius: 3px; }
+      ::-webkit-scrollbar { width: 4px; }
+      ::-webkit-scrollbar-track { background: #050505; }
+      ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
     </style>
   </head>
   <body>
     <div id="root"></div>
 
     <script type="text/babel" data-presets="react">
-      const { useState, useEffect, useRef } = React;
+      const { useState, useEffect } = React;
       const { createRoot } = ReactDOM;
 
-      // Icons
+      // === 图标组件 (SVG) ===
       const Icons = {
         Wifi: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>,
         Shield: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
         Globe: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>,
         Alert: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
         Check: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>,
-        Lock: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
+        Eye: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
+        EyeOff: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M1 1l22 22"/></svg>,
+        MapPin: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,
       };
 
-      // 工具函数
-      const maskIp = (ip) => ip.replace(/(\d+)\.(\d+)$/, '***.***').replace(/(:[\da-f]+){3}$/, ':****:****:****');
-
-      // --- 组件 ---
-
-      // 1. IP 主信息卡片 (带地图)
-      const IpCard = ({ data, riskScore }) => {
-        const [showIp, setShowIp] = useState(true); // 默认显示，点击隐藏
-        
-        return (
-          <div className="hud-card rounded-2xl p-0 flex flex-col md:flex-row overflow-hidden min-h-[280px]">
-            {/* 左侧：地图区域 */}
-            <div className="relative w-full md:w-2/5 h-48 md:h-auto bg-[#050505]">
-              <iframe 
-                src={\`https://maps.google.com/maps?q=\${data.lat},\${data.lon}&z=5&output=embed\`}
-                className="w-full h-full opacity-60 mix-blend-luminosity hover:mix-blend-normal transition-all duration-700"
-                style={{border:0}} loading="lazy"
-              ></iframe>
-              <div className="absolute bottom-2 left-2 bg-black/80 backdrop-blur px-2 py-1 rounded border border-white/10 text-[10px] font-mono text-neon-cyan">
-                LAT: {data.lat.toFixed(2)} | LON: {data.lon.toFixed(2)}
-              </div>
-            </div>
-
-            {/* 右侧：信息详情 */}
-            <div className="p-6 md:w-3/5 flex flex-col justify-between bg-gradient-to-br from-[#1f2833] to-[#0b0c10]">
-              <div>
-                <div className="flex justify-between items-start mb-2">
-                  <div className="text-xs font-mono text-gray-500 uppercase tracking-widest">Client IP Address</div>
-                  <div className="flex gap-2">
-                     {data.country === 'CN' && <span className="text-[10px] border border-neon-red/50 text-neon-red px-1.5 py-0.5 rounded">CN-Mainland</span>}
-                     <span className="text-[10px] border border-neon-cyan/50 text-neon-cyan px-1.5 py-0.5 rounded">{data.httpProtocol}</span>
-                  </div>
-                </div>
-                <h1 
-                  className="text-3xl md:text-5xl font-mono font-bold text-white mb-4 cursor-pointer hover:text-neon-cyan transition-colors truncate"
-                  onClick={() => setShowIp(!showIp)}
-                  title="点击切换显示/隐藏"
-                >
-                  {showIp ? data.ip : maskIp(data.ip)}
-                </h1>
-                
-                <div className="grid grid-cols-2 gap-y-4 gap-x-8">
-                  <div>
-                    <div className="text-[10px] text-gray-500 uppercase">Location</div>
-                    <div className="text-lg font-bold text-gray-200 flex items-center gap-2">
-                       {data.country} {data.region}
-                    </div>
-                    <div className="text-xs text-gray-400">{data.city}</div>
-                  </div>
-                  <div>
-                    <div className="text-[10px] text-gray-500 uppercase">Provider (ISP)</div>
-                    <div className="text-sm font-bold text-gray-200">{data.isp}</div>
-                    <div className="text-xs text-gray-400 font-mono">{data.asn}</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 pt-4 border-t border-white/5 flex justify-between items-end">
-                 <div className="text-xs text-gray-500">System Time: {new Date().toLocaleTimeString()}</div>
-                 <div className="text-xs font-mono text-neon-blue">
-                    SECURE CONNECTION
-                 </div>
-              </div>
-            </div>
-          </div>
-        );
+      // === 工具函数 ===
+      const maskIp = (ip) => {
+         if(!ip) return "";
+         return ip.replace(/(\d+)\.(\d+)$/, '***.***').replace(/(:[\da-f]+){3}$/, ':****:****:****');
       };
 
-      // 2. 风险检测仪表盘 (仿 ipfighter)
-      const RiskGauge = ({ riskData, loading }) => {
-        // 评分逻辑：满分100，每发现一项风险扣分
-        let score = 100;
-        let riskLevel = "Low";
-        let color = "#39ff14"; // Green
-
-        if (riskData) {
-            if (riskData.is_vpn) score -= 25;
-            if (riskData.is_proxy) score -= 25;
-            if (riskData.is_tor) score -= 40;
-            if (riskData.is_datacenter) score -= 15;
-            if (riskData.is_abuser) score -= 40;
-            score = Math.max(0, score);
-
-            if (score < 50) { riskLevel = "Critical"; color = "#ff073a"; } // Red
-            else if (score < 80) { riskLevel = "Medium"; color = "#ffd700"; } // Gold
-        }
-
-        const radius = 50;
-        const circumference = 2 * Math.PI * radius;
-        const offset = circumference - ((score / 100) * circumference);
-
-        const RiskItem = ({ label, detected }) => (
-            <div className="flex justify-between items-center py-1.5 border-b border-white/5 last:border-0">
-                <span className="text-xs text-gray-400">{label}</span>
-                <span className={\`text-xs font-bold font-mono px-2 py-0.5 rounded \${detected ? 'bg-neon-red/10 text-neon-red' : 'bg-neon-green/10 text-neon-green'}\`}>
-                    {detected ? "DETECTED" : "CLEAN"}
-                </span>
-            </div>
-        );
+      // === 组件：主要 IP 信息卡片 ===
+      const IpMainCard = ({ data }) => {
+        const [showIp, setShowIp] = useState(true);
+        const isCN = data.country === 'CN';
 
         return (
-          <div className="hud-card rounded-2xl p-5 flex flex-col h-full">
-            <div className="flex items-center gap-2 mb-4">
-              <Icons.Shield className="w-5 h-5 text-neon-cyan" />
-              <span className="font-bold text-white tracking-wider">FRAUD SCORE</span>
-            </div>
-
-            <div className="flex flex-col md:flex-row gap-6 items-center">
-              {/* 仪表盘 */}
-              <div className="relative w-32 h-32 flex-shrink-0">
-                <svg className="w-full h-full transform -rotate-90">
-                  <circle cx="64" cy="64" r={radius} stroke="#1f2833" strokeWidth="8" fill="none" />
-                  <circle 
-                    cx="64" cy="64" r={radius} 
-                    stroke={color} strokeWidth="8" fill="none" 
-                    strokeDasharray={circumference} 
-                    strokeDashoffset={loading ? circumference : offset} 
-                    strokeLinecap="round"
-                    className="gauge-circle"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-3xl font-bold font-mono text-white">{loading ? '--' : score}</span>
-                  <span className="text-[10px] uppercase font-bold" style={{color}}>{riskLevel}</span>
-                </div>
-              </div>
-
-              {/* 详细列表 */}
-              <div className="flex-grow w-full">
-                {loading ? (
-                    <div className="text-center text-xs text-gray-500 animate-pulse">Scanning IP Reputation...</div>
-                ) : (
-                    <div className="flex flex-col">
-                        <RiskItem label="VPN / Tunnel" detected={riskData.is_vpn} />
-                        <RiskItem label="Public Proxy" detected={riskData.is_proxy} />
-                        <RiskItem label="Tor Exit Node" detected={riskData.is_tor} />
-                        <RiskItem label="Hosting / DataCenter" detected={riskData.is_datacenter} />
-                        <RiskItem label="Abuse Reports" detected={riskData.is_abuser} />
-                    </div>
-                )}
-              </div>
-            </div>
-          </div>
-        );
-      };
-
-      // 3. 智能连通性测试 (支持持续Ping)
-      const ConnectivityGrid = ({ isCN }) => {
-        // 根据地区选择目标
-        const targets = isCN 
-            ? [
-                { name: "Baidu", url: "https://www.baidu.com", icon: "🔍" },
-                { name: "Bilibili", url: "https://www.bilibili.com", icon: "📺" },
-                { name: "WeChat", url: "https://mp.weixin.qq.com", icon: "💬" },
-                { name: "Douyin", url: "https://www.douyin.com", icon: "🎵" },
-                { name: "Taobao", url: "https://www.taobao.com", icon: "🛍️" },
-                { name: "Aliyun", url: "https://www.aliyun.com", icon: "☁️" },
-              ]
-            : [
-                { name: "Google", url: "https://www.google.com", icon: "G" },
-                { name: "YouTube", url: "https://www.youtube.com", icon: "▶️" },
-                { name: "GitHub", url: "https://github.com", icon: "🐙" },
-                { name: "OpenAI", url: "https://api.openai.com", icon: "🤖" },
-                { name: "Cloudflare", url: "https://www.cloudflare.com", icon: "☁️" },
-                { name: "Twitter", url: "https://twitter.com", icon: "🐦" },
-              ];
-
-        return (
-            <div className="hud-card rounded-2xl p-5">
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                        <Icons.Wifi className="w-5 h-5 text-neon-cyan" />
-                        <span className="font-bold text-white tracking-wider">NETWORK CONNECTIVITY</span>
-                    </div>
-                    <span className="text-[10px] text-gray-500 border border-gray-700 px-2 py-0.5 rounded">
-                        MODE: {isCN ? "CN-MAINLAND" : "GLOBAL"}
-                    </span>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                    {targets.map(t => <PingBox key={t.name} target={t} />)}
-                </div>
-            </div>
-        );
-      };
-
-      // 单个 Ping 盒子 (持续测试逻辑)
-      const PingBox = ({ target }) => {
-        const [stats, setStats] = useState({ avg: 0, last: 0, min: 9999, max: 0, count: 0 });
-        const [status, setStatus] = useState("waiting"); // waiting, pinging, done, error
-
-        useEffect(() => {
-            let mounted = true;
-            let history = [];
-            const maxTests = 5; // 连续测试5次取平均值
-
-            const doPing = async (attempt) => {
-                if (!mounted) return;
-                setStatus("pinging");
-                
-                const start = performance.now();
-                try {
-                    // 使用 no-cors 模式，只测时间
-                    await fetch(target.url + '?t=' + Date.now(), { mode: 'no-cors', cache: 'no-store' });
-                    const end = performance.now();
-                    const duration = Math.round(end - start);
-
-                    if (mounted) {
-                        history.push(duration);
-                        const avg = Math.round(history.reduce((a,b)=>a+b,0) / history.length);
-                        setStats({
-                            last: duration,
-                            avg: avg,
-                            min: Math.min(...history),
-                            max: Math.max(...history),
-                            count: attempt
-                        });
-
-                        if (attempt < maxTests) {
-                            setTimeout(() => doPing(attempt + 1), 500); // 间隔500ms再次测试
-                        } else {
-                            setStatus("done");
-                        }
-                    }
-                } catch (e) {
-                    if (mounted) setStatus("error");
-                }
-            };
-
-            // 延迟一点启动，形成错落感
-            setTimeout(() => doPing(1), Math.random() * 1000);
-
-            return () => { mounted = false; };
-        }, [target]);
-
-        // 颜色逻辑
-        let colorClass = "text-gray-500";
-        if (status === "done") {
-            if (stats.avg < 100) colorClass = "text-neon-green";
-            else if (stats.avg < 300) colorClass = "text-neon-gold";
-            else colorClass = "text-neon-red";
-        } else if (status === "error") {
-            colorClass = "text-neon-red";
-        }
-
-        return (
-            <div className="bg-[#12141a] border border-white/5 rounded-lg p-3 flex flex-col items-center justify-center relative overflow-hidden group">
-                {/* 顶部进度条 */}
-                {status === "pinging" && (
-                    <div className="absolute top-0 left-0 w-full h-0.5 bg-neon-cyan/30 overflow-hidden">
-                        <div className="h-full bg-neon-cyan animate-pulse"></div>
-                    </div>
-                )}
-                
-                <div className="text-xl mb-1 opacity-80 group-hover:scale-110 transition-transform">{target.icon}</div>
-                <div className="text-[10px] text-gray-500 uppercase font-bold mb-1">{target.name}</div>
-                
-                <div className={\`font-mono font-bold text-lg \${colorClass}\`}>
-                    {status === "waiting" && <span className="opacity-30">...</span>}
-                    {status === "pinging" && stats.last > 0 && stats.last}
-                    {status === "pinging" && stats.last === 0 && "..."}
-                    {status === "done" && \`\${stats.avg}ms\`}
-                    {status === "error" && "ERR"}
-                </div>
-
-                {status === "done" && (
-                    <div className="text-[9px] text-gray-600 font-mono mt-1">
-                        ±{stats.max - stats.min}ms
-                    </div>
-                )}
-            </div>
-        );
-      };
-
-      // 4. WebRTC 检测组件
-      const WebRTCCheck = () => {
-        const [ip, setIp] = useState(null);
-        const [status, setStatus] = useState("scanning"); // scanning, safe, leak
-
-        useEffect(() => {
-            const rtc = new RTCPeerConnection({iceServers: [{urls: "stun:stun.l.google.com:19302"}]});
-            rtc.createDataChannel('');
-            rtc.createOffer().then(o => rtc.setLocalDescription(o));
+          <div className="cyber-card rounded-2xl flex flex-col md:flex-row min-h-[300px]">
+            <div className="scan-line"></div>
             
-            rtc.onicecandidate = (ice) => {
-                if (ice && ice.candidate && ice.candidate.candidate) {
-                    const res = /([0-9]{1,3}(\.[0-9]{1,3}){3}|[a-f0-9]{1,4}(:[a-f0-9]{1,4}){7})/.exec(ice.candidate.candidate);
-                    if (res && res[1]) {
-                        // 过滤内网IP
-                        if (!res[1].match(/^(192\.168|10\.|172\.(1[6-9]|2\d|3[01]))/)) {
-                            setIp(res[1]);
-                            setStatus("leak");
-                        }
-                    }
-                }
-            };
-            
-            // 3秒后如果没有发现外网IP，则认为安全
-            setTimeout(() => {
-                if (status === "scanning" && !ip) setStatus("safe");
-            }, 3000);
-        }, [ip]);
+            {/* 左侧：地图 */}
+            <div className="relative w-full md:w-2/5 h-48 md:h-auto bg-[#000]">
+               <iframe 
+                  src={\`https://maps.google.com/maps?q=\${data.lat},\${data.lon}&z=6&output=embed\`}
+                  className="w-full h-full border-none map-filter opacity-50 hover:opacity-80 transition-opacity duration-500"
+                  title="IP Location"
+               ></iframe>
+               <div className="absolute bottom-3 left-3 flex flex-col gap-1">
+                  <div className="bg-black/80 backdrop-blur border border-accent/20 px-2 py-1 rounded text-[10px] text-accent font-mono flex items-center gap-1">
+                     <Icons.MapPin className="w-3 h-3" />
+                     {data.lat.toFixed(2)}, {data.lon.toFixed(2)}
+                  </div>
+               </div>
+            </div>
 
-        return (
-             <div className="hud-card rounded-2xl p-5 flex items-center justify-between">
-                <div>
-                    <div className="flex items-center gap-2 mb-1">
-                        <Icons.Globe className="w-5 h-5 text-neon-blue" />
-                        <span className="font-bold text-white tracking-wider">WebRTC LEAK TEST</span>
-                    </div>
-                    <div className="text-xs text-gray-500">Detecting Real IP via WebRTC Stun</div>
-                </div>
-                <div className="text-right">
-                    {status === "scanning" && <div className="text-neon-cyan text-sm font-mono animate-pulse">SCANNING...</div>}
-                    {status === "safe" && <div className="text-neon-green text-sm font-bold font-mono flex items-center gap-1"><Icons.Check className="w-4 h-4"/> SAFE</div>}
-                    {status === "leak" && (
-                        <div>
-                            <div className="text-neon-red text-sm font-bold font-mono flex items-center gap-1 justify-end"><Icons.Alert className="w-4 h-4"/> LEAK DETECTED</div>
-                            <div className="text-[10px] text-gray-400 font-mono">{ip}</div>
+            {/* 右侧：数据 */}
+            <div className="w-full md:w-3/5 p-6 flex flex-col justify-between relative bg-gradient-to-br from-transparent to-panel/80">
+               <div>
+                  <div className="flex justify-between items-start mb-4">
+                     <div>
+                        <div className="text-xs text-gray-500 font-mono uppercase tracking-widest mb-1">当前客户端 IP</div>
+                        <div className="flex items-center gap-3">
+                           <h1 className="text-3xl md:text-5xl font-mono font-bold text-white tracking-tight break-all cursor-pointer" onClick={() => setShowIp(!showIp)}>
+                              {showIp ? data.ip : maskIp(data.ip)}
+                           </h1>
+                           <button onClick={() => setShowIp(!showIp)} className="text-gray-500 hover:text-accent transition-colors">
+                              {showIp ? <Icons.EyeOff className="w-5 h-5"/> : <Icons.Eye className="w-5 h-5"/>}
+                           </button>
                         </div>
-                    )}
-                </div>
-             </div>
+                     </div>
+                     <div className="text-right hidden md:block">
+                        <span className="bg-accent/10 text-accent border border-accent/20 px-2 py-0.5 rounded text-xs font-bold font-mono">
+                           {isCN ? "中国大陆" : "海外地区"}
+                        </span>
+                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-6 mt-6">
+                     <div>
+                        <span className="text-xs text-gray-500 block mb-1">物理位置</span>
+                        <div className="text-lg text-gray-200 font-medium flex items-center gap-2">
+                           <span className="text-2xl">{data.country === 'CN' ? '🇨🇳' : '🌍'}</span>
+                           {data.country} {data.region}
+                        </div>
+                        <div className="text-sm text-gray-400 mt-0.5">{data.city}</div>
+                     </div>
+                     <div>
+                        <span className="text-xs text-gray-500 block mb-1">网络运营商 (ISP)</span>
+                        <div className="text-lg text-gray-200 font-medium truncate" title={data.isp}>{data.isp}</div>
+                        <div className="text-sm text-gray-400 font-mono mt-0.5">{data.asn}</div>
+                     </div>
+                  </div>
+               </div>
+
+               <div className="mt-8 pt-4 border-t border-white/5 flex justify-between items-center text-xs font-mono text-gray-600">
+                  <div>协议: {data.httpProtocol} / {data.tlsVersion}</div>
+                  <div className="text-accent flex items-center gap-1">
+                     <div className="w-1.5 h-1.5 bg-accent rounded-full animate-pulse"></div>
+                     监控中
+                  </div>
+               </div>
+            </div>
+          </div>
         );
       };
 
-      // 主应用
-      const App = () => {
-        const cfData = window.CF_DATA;
-        const [riskData, setRiskData] = useState(null);
-        const [riskLoading, setRiskLoading] = useState(true);
+      // === 组件：风险仪表盘 ===
+      const RiskDashboard = () => {
+         const [score, setScore] = useState(0);
+         const [loading, setLoading] = useState(true);
+         const [details, setDetails] = useState({});
 
-        useEffect(() => {
-            // 获取风险数据
+         useEffect(() => {
+            // 使用 ipapi.is 数据
             fetch('https://api.ipapi.is')
-                .then(res => res.json())
-                .then(data => {
-                    setRiskData(data);
-                    setRiskLoading(false);
-                })
-                .catch(() => setRiskLoading(false));
-        }, []);
+               .then(res => res.json())
+               .then(data => {
+                  let s = 100;
+                  // 简单的扣分逻辑
+                  if (data.is_vpn) s -= 30;
+                  if (data.is_proxy) s -= 30;
+                  if (data.is_tor) s -= 50;
+                  if (data.is_datacenter) s -= 20;
+                  if (data.is_abuser) s -= 50;
+                  
+                  setScore(Math.max(0, s));
+                  setDetails(data);
+                  setLoading(false);
+               })
+               .catch(() => {
+                  setScore(80); // 默认安全分
+                  setLoading(false);
+               });
+         }, []);
 
-        const isCN = cfData.country === 'CN';
+         // 计算圆环路径
+         const radius = 56;
+         const circumference = 2 * Math.PI * radius;
+         const offset = circumference - ((score / 100) * circumference);
+         
+         let color = "#00f2ea"; // 默认青色
+         let level = "安全";
+         if (score < 80) { color = "#f5d300"; level = "中等风险"; }
+         if (score < 50) { color = "#ff2a6d"; level = "高危"; }
+
+         const RiskItem = ({ label, active }) => (
+            <div className="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
+               <span className="text-xs text-gray-400">{label}</span>
+               <span className={\`text-xs font-mono font-bold px-2 py-0.5 rounded \${active ? 'bg-danger/20 text-danger border border-danger/30' : 'bg-white/5 text-gray-500'}\`}>
+                  {active ? "检出" : "安全"}
+               </span>
+            </div>
+         );
+
+         return (
+            <div className="cyber-card rounded-2xl p-6 h-full flex flex-col">
+               <div className="flex items-center gap-2 mb-6">
+                  <Icons.Shield className="w-5 h-5 text-accent" />
+                  <span className="font-bold text-white tracking-wide">风险评估</span>
+               </div>
+
+               <div className="flex flex-col md:flex-row items-center gap-8 h-full">
+                  {/* 仪表盘 */}
+                  <div className="relative w-32 h-32 flex-shrink-0">
+                     <svg className="w-full h-full transform -rotate-90">
+                        <circle cx="64" cy="64" r={radius} stroke="#333" strokeWidth="8" fill="none" />
+                        <circle 
+                           cx="64" cy="64" r={radius} 
+                           stroke={color} strokeWidth="8" fill="none"
+                           strokeDasharray={circumference}
+                           strokeDashoffset={loading ? circumference : offset}
+                           strokeLinecap="round"
+                           className="gauge-circle"
+                        />
+                     </svg>
+                     <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-3xl font-bold font-mono text-white">{loading ? '--' : score}</span>
+                        <span className="text-[10px] font-bold" style={{color}}>{level}</span>
+                     </div>
+                  </div>
+
+                  {/* 列表 */}
+                  <div className="flex-grow w-full space-y-1">
+                     <RiskItem label="VPN 服务" active={details.is_vpn} />
+                     <RiskItem label="代理服务器" active={details.is_proxy} />
+                     <RiskItem label="数据中心/云" active={details.is_datacenter} />
+                     <RiskItem label="Tor 节点" active={details.is_tor} />
+                  </div>
+               </div>
+            </div>
+         );
+      };
+
+      // === 组件：连通性测试 (支持多次 Ping) ===
+      const PingTest = ({ isCN }) => {
+         const targets = isCN 
+            ? [
+               { name: "百度", url: "https://www.baidu.com", icon: "🔍" },
+               { name: "B站", url: "https://www.bilibili.com", icon: "📺" },
+               { name: "淘宝", url: "https://www.taobao.com", icon: "🛍️" },
+               { name: "微信", url: "https://mp.weixin.qq.com", icon: "💬" },
+            ]
+            : [
+               { name: "Google", url: "https://www.google.com", icon: "G" },
+               { name: "YouTube", url: "https://www.youtube.com", icon: "▶️" },
+               { name: "GitHub", url: "https://github.com", icon: "🐙" },
+               { name: "OpenAI", url: "https://api.openai.com", icon: "🤖" },
+            ];
+
+         return (
+            <div className="cyber-card rounded-2xl p-6 mt-6">
+               <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                     <Icons.Wifi className="w-5 h-5 text-accent" />
+                     <span className="font-bold text-white">网络连通性测试</span>
+                  </div>
+                  <span className="text-[10px] font-mono border border-white/20 px-2 py-1 rounded text-gray-400">
+                     模式: {isCN ? "国内互联" : "国际互联"}
+                  </span>
+               </div>
+               
+               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {targets.map(t => <PingBox key={t.name} target={t} />)}
+               </div>
+            </div>
+         );
+      };
+
+      const PingBox = ({ target }) => {
+         const [ms, setMs] = useState(0);
+         const [status, setStatus] = useState("pending"); // pending, success, error
+
+         useEffect(() => {
+            const start = performance.now();
+            fetch(target.url, { mode: 'no-cors', cache: 'no-store' })
+               .then(() => {
+                  const duration = Math.round(performance.now() - start);
+                  setMs(duration);
+                  setStatus("success");
+               })
+               .catch(() => setStatus("error"));
+         }, [target]);
+
+         let color = "text-gray-500";
+         if (status === "success") color = ms < 200 ? "text-success" : "text-warning";
+         if (status === "error") color = "text-danger";
+
+         return (
+            <div className="bg-panel border border-white/5 rounded-lg p-4 flex flex-col items-center justify-center hover:border-accent/30 transition-colors">
+               <div className="text-2xl mb-2">{target.icon}</div>
+               <div className="text-xs text-gray-500 mb-1">{target.name}</div>
+               <div className={\`font-mono font-bold text-lg \${color}\`}>
+                  {status === "pending" ? <span className="animate-pulse">...</span> : 
+                   status === "error" ? "超时" : ms + "ms"}
+               </div>
+            </div>
+         );
+      };
+
+      // === 组件：WebRTC 检测 ===
+      const WebRTCCheck = () => {
+         const [leakIp, setLeakIp] = useState(null);
+         const [status, setStatus] = useState("scanning");
+
+         useEffect(() => {
+            try {
+               const rtc = new RTCPeerConnection({iceServers: [{urls: "stun:stun.l.google.com:19302"}]});
+               rtc.createDataChannel('');
+               rtc.createOffer().then(o => rtc.setLocalDescription(o));
+               
+               rtc.onicecandidate = (ice) => {
+                  if (ice && ice.candidate && ice.candidate.candidate) {
+                     const raw = ice.candidate.candidate;
+                     const ipMatch = /([0-9]{1,3}(\.[0-9]{1,3}){3}|[a-f0-9]{1,4}(:[a-f0-9]{1,4}){7})/.exec(raw);
+                     if (ipMatch && ipMatch[1]) {
+                        const ip = ipMatch[1];
+                        // 忽略内网 IP
+                        if (!ip.match(/^(192\.168|10\.|172\.(1[6-9]|2\d|3[01]))/)) {
+                           setLeakIp(ip);
+                           setStatus("leak");
+                           rtc.close();
+                        }
+                     }
+                  }
+               };
+               
+               setTimeout(() => {
+                  if (status === "scanning" && !leakIp) setStatus("safe");
+               }, 2000);
+            } catch(e) {
+               setStatus("safe");
+            }
+         }, []);
+
+         return (
+            <div className="cyber-card rounded-2xl p-6 flex flex-col justify-center h-full">
+               <div className="flex items-center gap-2 mb-2">
+                  <Icons.Globe className="w-5 h-5 text-success" />
+                  <span className="font-bold text-white">隐私泄露检测 (WebRTC)</span>
+               </div>
+               
+               <div className="flex-grow flex items-center">
+                  {status === "scanning" && <div className="text-accent font-mono animate-pulse">正在扫描 STUN 服务器...</div>}
+                  
+                  {status === "safe" && (
+                     <div className="flex items-center gap-2 text-success">
+                        <Icons.Check className="w-6 h-6" />
+                        <div>
+                           <div className="font-bold">未检测到 IP 泄露</div>
+                           <div className="text-xs text-gray-500">浏览器 WebRTC 接口安全</div>
+                        </div>
+                     </div>
+                  )}
+                  
+                  {status === "leak" && (
+                     <div className="flex items-center gap-2 text-danger">
+                        <Icons.Alert className="w-6 h-6" />
+                        <div>
+                           <div className="font-bold">存在真实 IP 泄露</div>
+                           <div className="text-xs font-mono bg-danger/10 px-1 rounded">{leakIp}</div>
+                        </div>
+                     </div>
+                  )}
+               </div>
+            </div>
+         );
+      };
+
+      // === 主程序 ===
+      const App = () => {
+        const data = window.CF_DATA;
+        const isCN = data.country === 'CN';
+
+        // 简单的错误边界 fallback
+        if (!data) return <div className="text-center p-10 text-white">数据加载失败，请刷新重试。</div>;
 
         return (
-          <div className="min-h-screen pb-12 bg-[#0b0c10] bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')]">
-            {/* Header */}
-            <header className="border-b border-white/5 bg-[#1f2833]/80 backdrop-blur sticky top-0 z-50">
+          <div className="min-h-screen pb-10">
+            {/* 顶栏 */}
+            <header className="border-b border-white/10 bg-panel/80 backdrop-blur sticky top-0 z-50">
                <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                     <div className="w-8 h-8 bg-neon-cyan/10 border border-neon-cyan/50 rounded flex items-center justify-center text-neon-cyan">
-                        <Icons.Shield className="w-5 h-5" />
+                  <div className="flex items-center gap-3">
+                     <div className="w-8 h-8 rounded bg-gradient-to-tr from-accent to-blue-500 flex items-center justify-center text-black font-bold">
+                        <Icons.Shield className="w-5 h-5 text-black" />
                      </div>
-                     <span className="text-lg font-bold text-white tracking-widest font-mono">
-                        IP<span className="text-neon-cyan">SENTINEL</span>
+                     <span className="text-lg font-bold text-white tracking-wider">
+                        IP<span className="text-accent">哨兵</span>
                      </span>
                   </div>
-                  <div className="hidden md:block text-[10px] font-mono text-neon-blue/80 border border-neon-blue/30 px-2 py-1 rounded">
-                     {window.SITE_CONFIG.footer}
+                  <div className="hidden md:block text-xs font-mono text-gray-500">
+                     系统状态: 监控中 // {new Date().toLocaleDateString()}
                   </div>
                </div>
             </header>
 
-            <main className="max-w-7xl mx-auto px-4 py-8 space-y-6">
-               {/* 第一排：IP 卡片 + 风险仪表盘 */}
+            <main className="max-w-7xl mx-auto px-4 py-8">
+               {/* 第一行：主要信息 + 风险 */}
                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div className="lg:col-span-2">
-                     <IpCard data={cfData} />
+                     <IpMainCard data={data} />
                   </div>
                   <div className="lg:col-span-1">
-                     <RiskGauge riskData={riskData} loading={riskLoading} />
+                     <RiskDashboard />
                   </div>
                </div>
 
-               {/* 第二排：连通性测试 */}
-               <ConnectivityGrid isCN={isCN} />
+               {/* 第二行：连通性 */}
+               <PingTest isCN={isCN} />
 
-               {/* 第三排：WebRTC + 其他 */}
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+               {/* 第三行：其他工具 */}
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                   <WebRTCCheck />
-                  <div className="hud-card rounded-2xl p-5 flex flex-col justify-center">
-                      <div className="flex items-center gap-2 mb-2">
-                          <Icons.Lock className="w-5 h-5 text-neon-gold" />
-                          <span className="font-bold text-white tracking-wider">ENVIRONMENT</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-                          <div className="bg-black/20 p-2 rounded border border-white/5">
-                              <span className="text-gray-500 block">UA OS</span>
-                              <span className="text-gray-300 truncate">{cfData.userAgent.split(')')[0].split('(')[1] || 'Unknown'}</span>
-                          </div>
-                           <div className="bg-black/20 p-2 rounded border border-white/5">
-                              <span className="text-gray-500 block">TLS / PROTO</span>
-                              <span className="text-gray-300">{cfData.tlsVersion} / {cfData.httpProtocol}</span>
-                          </div>
-                      </div>
+                  <div className="cyber-card rounded-2xl p-6 flex flex-col justify-center">
+                     <div className="text-gray-500 text-xs uppercase mb-2">客户端环境</div>
+                     <div className="bg-black/30 p-3 rounded border border-white/5 font-mono text-xs text-gray-300 break-all">
+                        {data.userAgent}
+                     </div>
                   </div>
                </div>
-
             </main>
 
-            <footer className="text-center text-[10px] text-gray-600 font-mono py-8">
-               DATA PROVIDED BY CLOUDFLARE & IPAPI.IS
+            <footer className="text-center py-8 text-xs text-gray-600 font-mono">
+               IP SENTINEL SYSTEM // POWERED BY CLOUDFLARE WORKERS
             </footer>
           </div>
         );
