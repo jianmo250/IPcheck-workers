@@ -33,13 +33,12 @@ function renderHtml(cfData) {
     <title>IPcheck</title>
     <link rel="icon" href="${faviconSvg}">
     
-    <!-- 1. 关键：防闪烁脚本，必须放在 CSS 之前或 head 顶部 -->
     <script>
       (function() {
         try {
           const savedTheme = localStorage.getItem('theme');
           const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          // 如果用户存了 dark，或者没存但系统是 dark
+
           if (savedTheme === 'dark' || (!savedTheme && systemDark)) {
             document.documentElement.classList.add('dark');
           } else {
