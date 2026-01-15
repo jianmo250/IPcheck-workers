@@ -493,7 +493,7 @@ export default {
                            {conn && (
                                <>
                                   <div className="w-px h-3 bg-gray-300 dark:bg-gray-600"></div>
-                                  <div><span className="hidden sm:inline">Net:</span> {conn.type.toUpperCase()}</div>
+                                  <div><span className="hidden sm:inline">Speed Level:</span> {conn.type.toUpperCase()}</div>
                                </>
                            )}
                        </div>
