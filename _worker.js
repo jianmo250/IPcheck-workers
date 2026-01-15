@@ -1,710 +1,733 @@
 export default {
-    async fetch(request, env, ctx) {
-      const cf = request.cf || {};
-      const headers = request.headers;
-      const clientIp = headers.get("cf-connecting-ip") || headers.get("x-forwarded-for") || "127.0.0.1";
-  
-      const cfData = {
-        ip: clientIp,
-        city: cf.city || "Unknown",
-        country: cf.country || "Unknown",
-        isp: cf.asOrganization || "Cloudflare",
-        asn: cf.asn ? `AS${cf.asn}` : "N/A",
-        colo: cf.colo || "N/A",
-        http: cf.httpProtocol || "HTTP",
-        tls: cf.tlsVersion || "N/A"
-      };
-  
-      return new Response(renderHtml(cfData), {
-        headers: { 'content-type': 'text/html;charset=UTF-8' },
-      });
-    },
-  };
-  
-  function renderHtml(cfData) {
-    const faviconSvg = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23F38020%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><path d=%22M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z%22/></svg>`;
-  
-    return `
-  <!DOCTYPE html>
-  <html lang="zh-CN">
-    <head>
-      <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <title>IPcheck</title>
-      <link rel="icon" href="${faviconSvg}">
-      <script src="https://cdn.tailwindcss.com"></script>
-      <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-      <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-      <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-      <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  async fetch(request, env, ctx) {
+    const cf = request.cf || {};
+    const headers = request.headers;
+    const clientIp = headers.get("cf-connecting-ip") || headers.get("x-forwarded-for") || "127.0.0.1";
+
+    const cfData = {
+      ip: clientIp,
+      city: cf.city || "Unknown",
+      country: cf.country || "Unknown",
+      isp: cf.asOrganization || "Cloudflare",
+      asn: cf.asn ? `AS${cf.asn}` : "N/A",
+      colo: cf.colo || "N/A",
+      http: cf.httpProtocol || "HTTP",
+      tls: cf.tlsVersion || "N/A"
+    };
+
+    return new Response(renderHtml(cfData), {
+      headers: { 'content-type': 'text/html;charset=UTF-8' },
+    });
+  },
+};
+
+function renderHtml(cfData) {
+  const faviconSvg = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23F38020%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><path d=%22M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z%22/></svg>`;
+
+  return `
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IPcheck</title>
+    <link rel="icon" href="${faviconSvg}">
+    
+    <!-- 1. 关键：防闪烁脚本，必须放在 CSS 之前或 head 顶部 -->
+    <script>
+      (function() {
+        try {
+          const savedTheme = localStorage.getItem('theme');
+          const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          // 如果用户存了 dark，或者没存但系统是 dark
+          if (savedTheme === 'dark' || (!savedTheme && systemDark)) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <script>
+      window.CF_DATA = ${JSON.stringify(cfData)};
       
-      <script>
-        window.CF_DATA = ${JSON.stringify(cfData)};
-        
-        tailwind.config = {
-          darkMode: 'class',
-          theme: {
-            extend: {
-              fontFamily: { 
-                sans: ['Plus Jakarta Sans', 'sans-serif'], 
-                mono: ['JetBrains Mono', 'monospace'] 
-              },
-              colors: {
-                primary: '#F38020',
-                dark: {
-                  bg: '#0f172a',
-                  card: 'rgba(30, 41, 59, 0.7)',
-                  border: 'rgba(255, 255, 255, 0.1)'
-                }
-              },
-              animation: {
-                'slide-up': 'slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-                'pulse-glow': 'pulseGlow 2s infinite',
-              },
-              keyframes: {
-                slideUp: {
-                  '0%': { opacity: 0, transform: 'translateY(20px)' },
-                  '100%': { opacity: 1, transform: 'translateY(0)' },
-                },
-                pulseGlow: {
-                  '0%, 100%': { opacity: 1, boxShadow: '0 0 0 0px rgba(16, 185, 129, 0.4)' },
-                  '50%': { opacity: 0.8, boxShadow: '0 0 0 4px rgba(16, 185, 129, 0)' },
-                }
-              },
-              boxShadow: {
-                'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.05)',
-                'neon': '0 0 10px rgba(243, 128, 32, 0.2)',
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: { 
+              sans: ['Plus Jakarta Sans', 'sans-serif'], 
+              mono: ['JetBrains Mono', 'monospace'] 
+            },
+            colors: {
+              primary: '#F38020',
+              dark: {
+                bg: '#0f172a',
+                card: 'rgba(30, 41, 59, 0.7)',
+                border: 'rgba(255, 255, 255, 0.1)'
               }
+            },
+            animation: {
+              'slide-up': 'slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+              'pulse-glow': 'pulseGlow 2s infinite',
+            },
+            keyframes: {
+              slideUp: {
+                '0%': { opacity: 0, transform: 'translateY(20px)' },
+                '100%': { opacity: 1, transform: 'translateY(0)' },
+              },
+              pulseGlow: {
+                '0%, 100%': { opacity: 1, boxShadow: '0 0 0 0px rgba(16, 185, 129, 0.4)' },
+                '50%': { opacity: 0.8, boxShadow: '0 0 0 4px rgba(16, 185, 129, 0)' },
+              }
+            },
+            boxShadow: {
+              'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.05)',
+              'neon': '0 0 10px rgba(243, 128, 32, 0.2)',
             }
           }
         }
-      </script>
-      <style>
-        body { 
-          background-color: #f0f4f8;
-          background-image: 
-            linear-gradient(rgba(200, 200, 200, 0.1) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(200, 200, 200, 0.1) 1px, transparent 1px);
-          background-size: 30px 30px;
-          min-height: 100vh;
-          color: #0f172a;
-          transition: background-color 0.3s, color 0.3s;
-        }
-  
-        /* Dark Mode Body */
-        .dark body {
-          background-color: #020617;
-          background-image: 
-            linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-          color: #f8fafc;
-        }
-        
-        .glass-card {
-          background: rgba(255, 255, 255, 0.8);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border: 1px solid rgba(255, 255, 255, 0.8);
-          box-shadow: 
-            0 4px 6px -1px rgba(0, 0, 0, 0.02),
-            0 2px 4px -1px rgba(0, 0, 0, 0.02),
-            inset 0 0 0 1px rgba(255, 255, 255, 0.5);
-          transition: background 0.3s, border-color 0.3s;
-        }
-  
-        /* Dark Mode Glass Card */
-        .dark .glass-card {
-          background: rgba(15, 23, 42, 0.6);
-          border: 1px solid rgba(255, 255, 255, 0.05);
-          box-shadow: 
-            0 4px 6px -1px rgba(0, 0, 0, 0.3),
-            inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-        }
-        
-        .scan-line {
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 50%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-            transform: skewX(-20deg);
-            animation: scan 6s infinite;
-            pointer-events: none;
-        }
-        .dark .scan-line {
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
-        }
-        
-        @keyframes scan {
-            0%, 50% { left: -100%; }
-            100% { left: 200%; }
-        }
-  
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      </style>
-    </head>
-    <body class="p-4 md:p-8 pb-24 antialiased selection:bg-orange-100 selection:text-orange-600 dark:selection:bg-orange-900/30 dark:selection:text-orange-400">
-      <div id="root" class="max-w-7xl mx-auto relative z-10"></div>
-  
-      <script type="text/babel" data-presets="react">
-        const { useState, useEffect, useLayoutEffect } = React;
-        const { createRoot } = ReactDOM;
-  
-        const extractScore = (val) => {
-            if (val === undefined || val === null) return 0;
-            const match = String(val).match(/([0-9.]+)/);
-            if (!match) return 0;
-            const num = parseFloat(match[1]);
-            return Math.min(100, Math.round(num * 100)); 
-        };
-  
-        const Sparkline = ({ data, color, width = 100, height = 30 }) => {
-            if (data.length < 2) return null;
-            const max = Math.max(...data, 100);
-            const min = Math.min(...data);
-            const range = max - min || 1;
-            
-            const points = data.map((val, i) => {
-                const x = (i / (data.length - 1)) * width;
-                const y = height - ((val - min) / range) * height;
-                return \`\${x},\${y}\`;
-            }).join(' ');
-  
-            const strokeColor = color === 'green' ? '#10b981' : (color === 'yellow' ? '#f59e0b' : '#f43f5e');
-  
-            return (
-                <svg width="100%" height="100%" viewBox={\`0 0 \${width} \${height}\`} preserveAspectRatio="none" className="overflow-visible">
-                    <defs>
-                        <linearGradient id={\`grad-\${color}\`} x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" stopColor={strokeColor} stopOpacity="0.2" />
-                            <stop offset="100%" stopColor={strokeColor} stopOpacity="0" />
-                        </linearGradient>
-                    </defs>
-                    <path d={\`M0,\${height} \${points} \${width},\${height} Z\`} fill={\`url(#grad-\${color})\`} />
-                    <polyline points={points} fill="none" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    <circle cx={width} cy={height - ((data[data.length-1] - min) / range) * height} r="2" fill={strokeColor} className="animate-pulse" />
-                </svg>
-            );
-        };
-  
-        const PingCard = ({ name, url, icon, index }) => {
-            const [ms, setMs] = useState(null);
-            const [history, setHistory] = useState(new Array(10).fill(0));
-  
-            useEffect(() => {
-                const ping = () => {
-                    const start = Date.now();
-                    const img = new Image();
-                    const update = () => {
-                        const t = Date.now() - start;
-                        setMs(t);
-                        setHistory(prev => [...prev.slice(1), t]);
-                    };
-                    img.onload = update;
-                    img.onerror = update;
-                    img.src = \`\${url}?t=\${Date.now()}\`;
-                };
-                const t1 = setTimeout(ping, index * 200);
-                const t2 = setInterval(ping, 2000);
-                return () => { clearTimeout(t1); clearInterval(t2); };
-            }, [url]);
-  
-            const statusColor = !ms ? 'gray' : (ms < 100 ? 'green' : (ms < 300 ? 'yellow' : 'red'));
-  
-            return (
-                <div 
-                    className="glass-card p-3 rounded-xl flex items-center justify-between gap-3 group hover:-translate-y-1 transition-transform duration-300 relative overflow-hidden"
-                    style={{ animationDelay: \`\${index * 50}ms\` }}
-                >
-                    <div className="flex items-center gap-3 z-10">
-                        <div className="w-8 h-8 rounded-full bg-white/50 dark:bg-slate-700/50 border border-white dark:border-white/10 flex items-center justify-center shadow-sm">
-                            <img src={icon} className="w-5 h-5 object-contain" />
-                        </div>
-                        <div>
-                            <div className="text-[11px] font-bold text-gray-700 dark:text-gray-200 leading-tight">{name}</div>
-                            <div className={\`text-[10px] font-mono font-bold \${
-                                statusColor === 'green' ? 'text-emerald-600 dark:text-emerald-400' : 
-                                statusColor === 'yellow' ? 'text-amber-600 dark:text-amber-400' : 
-                                statusColor === 'red' ? 'text-rose-600 dark:text-rose-400' : 'text-gray-400 dark:text-gray-500'
-                            }\`}>
-                                {ms ? \`\${ms}ms\` : 'Waiting...'}
-                            </div>
-                        </div>
-                    </div>
-                    <div className="w-16 h-8 opacity-60 group-hover:opacity-100 transition-opacity z-10">
-                        <Sparkline data={history} color={statusColor} />
-                    </div>
-                    <div className={\`absolute right-0 top-0 w-16 h-full bg-gradient-to-l from-\${
-                        statusColor === 'green' ? 'emerald' : statusColor === 'yellow' ? 'amber' : 'rose'
-                    }-50/50 dark:from-\${
-                        statusColor === 'green' ? 'emerald' : statusColor === 'yellow' ? 'amber' : 'rose'
-                    }-900/20 to-transparent pointer-events-none\`} />
-                </div>
-            );
-        };
-  
-        const RiskReport = ({ data, loading }) => {
-            if (loading) return (
-                <div className="mt-4 p-4 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50/50 dark:bg-slate-800/50 animate-pulse">
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-4"></div>
-                    <div className="space-y-2">
-                        <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
-                        <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
-                    </div>
-                </div>
-            );
-  
-            if (!data) return null;
-  
-            const companyScore = extractScore(data.company?.abuser_score);
-            const asnScore = extractScore(data.asn?.abuser_score);
-            
-            const InfoRow = ({ label, value, sub }) => (
-                <div className="flex flex-col py-1.5 border-b border-gray-100/50 dark:border-gray-700/50 last:border-0">
-                    <span className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold tracking-wider">{label}</span>
-                    <span className="text-xs font-medium text-gray-700 dark:text-gray-200 break-all">{value || 'N/A'}</span>
-                    {sub && <span className="text-[10px] text-gray-400 dark:text-gray-500">{sub}</span>}
-                </div>
-            );
-  
-            const Tag = ({ type, active, text }) => {
-                if(!active) return null;
-                const colors = {
-                    bad: 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-900/30',
-                    good: 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-900/30',
-                    warn: 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-900/30',
-                    neutral: 'bg-gray-50 text-gray-500 border-gray-100 dark:bg-slate-800 dark:text-gray-400 dark:border-slate-700'
-                };
-                return (
-                    <span className={\`text-[10px] px-2 py-0.5 rounded border font-semibold \${colors[type]}\`}>
-                        {text}
-                    </span>
-                );
-            };
-  
-            const getLocalTime = (tz) => {
-                if (!tz) return '未知';
-                try {
-                    return new Date().toLocaleTimeString('zh-CN', { timeZone: tz, hour: '2-digit', minute:'2-digit' });
-                } catch { return '未知'; }
-            };
-  
-            return (
-                <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-700/50">
-                    <div className="grid grid-cols-2 gap-4 mb-5">
-                        <div className="bg-white/50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-700 rounded-lg p-3 text-center relative overflow-hidden group">
-                            <div className="relative z-10">
-                                <div className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold">运营商信誉</div>
-                                <div className={\`text-xl font-mono font-bold mt-1 \${companyScore > 20 ? 'text-rose-500 dark:text-rose-400' : 'text-emerald-500 dark:text-emerald-400'}\`}>
-                                    {companyScore}%
-                                </div>
-                            </div>
-                            <div className={\`absolute bottom-0 left-0 h-1 bg-current w-full opacity-20 \${companyScore > 20 ? 'text-rose-500' : 'text-emerald-500'}\`}></div>
-                        </div>
-                        <div className="bg-white/50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-700 rounded-lg p-3 text-center relative overflow-hidden group">
-                            <div className="relative z-10">
-                                <div className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold">ASN 信誉</div>
-                                <div className={\`text-xl font-mono font-bold mt-1 \${asnScore > 20 ? 'text-rose-500 dark:text-rose-400' : 'text-emerald-500 dark:text-emerald-400'}\`}>
-                                    {asnScore}%
-                                </div>
-                            </div>
-                            <div className={\`absolute bottom-0 left-0 h-1 bg-current w-full opacity-20 \${asnScore > 20 ? 'text-rose-500' : 'text-emerald-500'}\`}></div>
-                        </div>
-                    </div>
-  
-                    <div className="flex flex-wrap gap-2 mb-5">
-                        <Tag type="bad" active={data.is_proxy} text="Proxy" />
-                        <Tag type="bad" active={data.is_vpn} text="VPN" />
-                        <Tag type="bad" active={data.is_tor} text="Tor" />
-                        <Tag type="bad" active={data.is_datacenter} text="Data Center" />
-                        <Tag type="bad" active={data.is_abuser} text="Abuser" />
-                        <Tag type="bad" active={data.is_bogon} text="Bogon" />
-                        <Tag type="good" active={data.is_mobile} text="Mobile ISP" />
-                        <Tag type="good" active={data.is_crawler} text="Search Engine" />
-                        <Tag type="neutral" active={!data.is_proxy && !data.is_datacenter} text="Low Risk" />
-                    </div>
-  
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                        <InfoRow label="ASN 组织" value={data.asn?.org} sub={data.asn?.type} />
-                        <InfoRow label="路由段 (Route)" value={data.asn?.route} />
-                        <InfoRow label="注册局 (Registry)" value={data.asn?.registry} />
-                        <InfoRow label="所属公司" value={data.company?.name} sub={data.company?.domain} />
-                        <div className="col-span-2 mt-2 pt-2 border-t border-dashed border-gray-200 dark:border-gray-700">
-                             <div className="flex justify-between items-center mb-1">
-                                <span className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold">地理位置详情</span>
-                                <a href={\`https://www.google.com/maps/search/?api=1&query=\${data.location?.latitude},\${data.location?.longitude}\`} target="_blank" className="text-[10px] text-blue-500 dark:text-blue-400 hover:underline">Open Map ↗</a>
-                             </div>
-                             <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 dark:text-gray-300">
-                                <div>
-                                    <span className="block text-[10px] text-gray-400 dark:text-gray-500">城市/地区</span>
-                                    {data.location?.city}, {data.location?.state}
-                                </div>
-                                <div>
-                                    <span className="block text-[10px] text-gray-400 dark:text-gray-500">时区 & 时间</span>
-                                    {data.location?.timezone} ({getLocalTime(data.location?.timezone)})
-                                </div>
-                             </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-  
-        const IpCard = ({ title, type, delay = 0, accent }) => {
-            const [info, setInfo] = useState({ ip: 'Initializing...', status: 'loading' });
-            const [risk, setRisk] = useState(null);
-            const [loadRisk, setLoadRisk] = useState(false);
-  
-            useEffect(() => {
-                const init = async () => {
-                    await new Promise(r => setTimeout(r, delay));
-                    let ip = null;
-  
-                    try {
-                        if (type === 'domestic') {
-                            try {
-                                const r = await fetch('https://myip.ipip.net/json');
-                                const j = await r.json();
-                                ip = j.data.ip;
-                            } catch {
-                                try {
-                                    const r = await fetch('https://ipapi.co/json/');
-                                    const j = await r.json();
-                                    ip = j.ip;
-                                } catch {
-                                    ip = 'Error';
-                                }
-                            }
-                        } else if (type === 'foreign') {
-                            const r = await fetch('https://ipinfo.io/json');
-                            const j = await r.json();
-                            ip = j.ip;
-                        } else {
-                            const r = await fetch('https://api.ip.sb/jsonip');
-                            const j = await r.json();
-                            ip = j.ip;
-                        }
-  
-                        setInfo({ ip: ip, status: 'ok' });
-                        
-                        if (ip && ip !== 'Error') {
-                            setLoadRisk(true);
-                            fetch(\`https://api.ipapi.is?q=\${ip}\`)
-                                .then(r => r.json())
-                                .then(d => {
-                                    setRisk(d);
-                                    setLoadRisk(false);
-                                })
-                                .catch(() => setLoadRisk(false));
-                        }
-                    } catch (e) {
-                        setInfo({ ip: 'Connection Failed', status: 'error' });
-                    }
-                };
-                init();
-            }, []);
-  
-            const isErr = info.status === 'error';
-            const isLoading = info.status === 'loading';
-  
-            return (
-                <div 
-                    className="glass-card rounded-2xl p-6 relative overflow-hidden animate-slide-up h-full flex flex-col"
-                    style={{ animationDelay: \`\${delay}ms\` }}
-                >
-                    <div className={\`absolute top-0 left-0 w-full h-1 bg-\${accent}-500\`}></div>
-                    <div className="scan-line"></div>
-                    
-                    <div className="flex justify-between items-start mb-3">
-                        <h3 className={\`text-xs font-bold uppercase tracking-widest flex items-center gap-2 text-\${accent}-600 dark:text-\${accent}-400\`}>
-                           <span className={\`w-2 h-2 rounded-full bg-\${accent}-500 shadow-neon\`}></span>
-                           {title}
-                        </h3>
-                        {isLoading && <div className="w-3 h-3 border-2 border-gray-300 dark:border-gray-600 border-t-transparent rounded-full animate-spin"></div>}
-                    </div>
-  
-                    <div className="mb-2">
-                        {isLoading ? (
-                            <div className="h-8 w-3/4 bg-gray-100 dark:bg-gray-700 rounded animate-pulse"></div>
-                        ) : (
-                            <div className={\`text-2xl font-mono font-bold tracking-tight break-all \${isErr ? 'text-rose-500 dark:text-rose-400' : 'text-gray-800 dark:text-gray-100'}\`}>
-                                {info.ip}
-                            </div>
-                        )}
-                    </div>
-  
-                    {!isErr && !isLoading && (
-                        <div className="flex-1">
-                            <RiskReport data={risk} loading={loadRisk} />
-                        </div>
-                    )}
-                </div>
-            );
-        };
-  
-        const NetworkHeader = ({ theme, toggleTheme }) => {
-             const [conn, setConn] = useState(null);
-             useEffect(() => {
-                 if (navigator.connection) {
-                     setConn({
-                         type: navigator.connection.effectiveType,
-                         rtt: navigator.connection.rtt,
-                         saveData: navigator.connection.saveData
-                     });
-                 }
-             }, []);
-  
-             return (
-                 <header className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-slide-up">
-                     <div className="flex items-center gap-4">
-                         <div className="relative">
-                             <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-xl shadow-glass flex items-center justify-center text-primary relative z-10">
-                                 <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
-                             </div>
-                             <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full"></div>
-                         </div>
-                         <div>
-                             <h1 className="text-3xl font-bold text-gray-800 dark:text-white tracking-tight">IPcheck</h1>
-                             <p className="text-xs text-gray-500 dark:text-gray-400 font-mono flex items-center gap-2">
-                                 <span>{window.CF_DATA.colo} • {window.CF_DATA.country}</span>
-                             </p>
-                         </div>
-                     </div>
-                     <div className="flex items-center gap-3">
-                       <button 
-                          onClick={toggleTheme}
-                          className="glass-card w-9 h-9 flex items-center justify-center rounded-full text-gray-600 dark:text-gray-300 hover:text-primary transition-colors"
-                       >
-                          {theme === 'dark' ? (
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                          ) : (
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
-                          )}
-                       </button>
-                       <div className="glass-card px-4 py-2 rounded-full flex items-center gap-4 text-xs font-mono text-gray-600 dark:text-gray-300 shadow-sm">
-                           <div className="flex items-center gap-1.5">
-                               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse-glow"></span>
-                               <span className="hidden sm:inline">Protocol:</span> {window.CF_DATA.http}
+      }
+    </script>
+    <style>
+      /* 2. 优化：设置 html 背景色，防止边缘白边 */
+      html {
+        background-color: #f0f4f8;
+      }
+      html.dark {
+        background-color: #020617;
+      }
+
+      body { 
+        background-color: #f0f4f8;
+        background-image: 
+          linear-gradient(rgba(200, 200, 200, 0.1) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(200, 200, 200, 0.1) 1px, transparent 1px);
+        background-size: 30px 30px;
+        min-height: 100vh;
+        color: #0f172a;
+        transition: background-color 0.3s, color 0.3s;
+      }
+
+      /* Dark Mode Body */
+      .dark body {
+        background-color: #020617;
+        background-image: 
+          linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        color: #f8fafc;
+      }
+      
+      .glass-card {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        box-shadow: 
+          0 4px 6px -1px rgba(0, 0, 0, 0.02),
+          0 2px 4px -1px rgba(0, 0, 0, 0.02),
+          inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+        transition: background 0.3s, border-color 0.3s;
+      }
+
+      /* Dark Mode Glass Card */
+      .dark .glass-card {
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        box-shadow: 
+          0 4px 6px -1px rgba(0, 0, 0, 0.3),
+          inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+      }
+      
+      .scan-line {
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 50%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+          transform: skewX(-20deg);
+          animation: scan 6s infinite;
+          pointer-events: none;
+      }
+      .dark .scan-line {
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+      }
+      
+      @keyframes scan {
+          0%, 50% { left: -100%; }
+          100% { left: 200%; }
+      }
+
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+  </head>
+  <body class="p-4 md:p-8 pb-24 antialiased selection:bg-orange-100 selection:text-orange-600 dark:selection:bg-orange-900/30 dark:selection:text-orange-400">
+    <div id="root" class="max-w-7xl mx-auto relative z-10"></div>
+
+    <script type="text/babel" data-presets="react">
+      const { useState, useEffect, useLayoutEffect } = React;
+      const { createRoot } = ReactDOM;
+
+      const extractScore = (val) => {
+          if (val === undefined || val === null) return 0;
+          const match = String(val).match(/([0-9.]+)/);
+          if (!match) return 0;
+          const num = parseFloat(match[1]);
+          return Math.min(100, Math.round(num * 100)); 
+      };
+
+      const Sparkline = ({ data, color, width = 100, height = 30 }) => {
+          if (data.length < 2) return null;
+          const max = Math.max(...data, 100);
+          const min = Math.min(...data);
+          const range = max - min || 1;
+          
+          const points = data.map((val, i) => {
+              const x = (i / (data.length - 1)) * width;
+              const y = height - ((val - min) / range) * height;
+              return \`\${x},\${y}\`;
+          }).join(' ');
+
+          const strokeColor = color === 'green' ? '#10b981' : (color === 'yellow' ? '#f59e0b' : '#f43f5e');
+
+          return (
+              <svg width="100%" height="100%" viewBox={\`0 0 \${width} \${height}\`} preserveAspectRatio="none" className="overflow-visible">
+                  <defs>
+                      <linearGradient id={\`grad-\${color}\`} x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor={strokeColor} stopOpacity="0.2" />
+                          <stop offset="100%" stopColor={strokeColor} stopOpacity="0" />
+                      </linearGradient>
+                  </defs>
+                  <path d={\`M0,\${height} \${points} \${width},\${height} Z\`} fill={\`url(#grad-\${color})\`} />
+                  <polyline points={points} fill="none" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <circle cx={width} cy={height - ((data[data.length-1] - min) / range) * height} r="2" fill={strokeColor} className="animate-pulse" />
+              </svg>
+          );
+      };
+
+      const PingCard = ({ name, url, icon, index }) => {
+          const [ms, setMs] = useState(null);
+          const [history, setHistory] = useState(new Array(10).fill(0));
+
+          useEffect(() => {
+              const ping = () => {
+                  const start = Date.now();
+                  const img = new Image();
+                  const update = () => {
+                      const t = Date.now() - start;
+                      setMs(t);
+                      setHistory(prev => [...prev.slice(1), t]);
+                  };
+                  img.onload = update;
+                  img.onerror = update;
+                  img.src = \`\${url}?t=\${Date.now()}\`;
+              };
+              const t1 = setTimeout(ping, index * 200);
+              const t2 = setInterval(ping, 2000);
+              return () => { clearTimeout(t1); clearInterval(t2); };
+          }, [url]);
+
+          const statusColor = !ms ? 'gray' : (ms < 100 ? 'green' : (ms < 300 ? 'yellow' : 'red'));
+
+          return (
+              <div 
+                  className="glass-card p-3 rounded-xl flex items-center justify-between gap-3 group hover:-translate-y-1 transition-transform duration-300 relative overflow-hidden"
+                  style={{ animationDelay: \`\${index * 50}ms\` }}
+              >
+                  <div className="flex items-center gap-3 z-10">
+                      <div className="w-8 h-8 rounded-full bg-white/50 dark:bg-slate-700/50 border border-white dark:border-white/10 flex items-center justify-center shadow-sm">
+                          <img src={icon} className="w-5 h-5 object-contain" />
+                      </div>
+                      <div>
+                          <div className="text-[11px] font-bold text-gray-700 dark:text-gray-200 leading-tight">{name}</div>
+                          <div className={\`text-[10px] font-mono font-bold \${
+                              statusColor === 'green' ? 'text-emerald-600 dark:text-emerald-400' : 
+                              statusColor === 'yellow' ? 'text-amber-600 dark:text-amber-400' : 
+                              statusColor === 'red' ? 'text-rose-600 dark:text-rose-400' : 'text-gray-400 dark:text-gray-500'
+                          }\`}>
+                              {ms ? \`\${ms}ms\` : 'Waiting...'}
+                          </div>
+                      </div>
+                  </div>
+                  <div className="w-16 h-8 opacity-60 group-hover:opacity-100 transition-opacity z-10">
+                      <Sparkline data={history} color={statusColor} />
+                  </div>
+                  <div className={\`absolute right-0 top-0 w-16 h-full bg-gradient-to-l from-\${
+                      statusColor === 'green' ? 'emerald' : statusColor === 'yellow' ? 'amber' : 'rose'
+                  }-50/50 dark:from-\${
+                      statusColor === 'green' ? 'emerald' : statusColor === 'yellow' ? 'amber' : 'rose'
+                  }-900/20 to-transparent pointer-events-none\`} />
+              </div>
+          );
+      };
+
+      const RiskReport = ({ data, loading }) => {
+          if (loading) return (
+              <div className="mt-4 p-4 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50/50 dark:bg-slate-800/50 animate-pulse">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-4"></div>
+                  <div className="space-y-2">
+                      <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+                      <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+                  </div>
+              </div>
+          );
+
+          if (!data) return null;
+
+          const companyScore = extractScore(data.company?.abuser_score);
+          const asnScore = extractScore(data.asn?.abuser_score);
+          
+          const InfoRow = ({ label, value, sub }) => (
+              <div className="flex flex-col py-1.5 border-b border-gray-100/50 dark:border-gray-700/50 last:border-0">
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold tracking-wider">{label}</span>
+                  <span className="text-xs font-medium text-gray-700 dark:text-gray-200 break-all">{value || 'N/A'}</span>
+                  {sub && <span className="text-[10px] text-gray-400 dark:text-gray-500">{sub}</span>}
+              </div>
+          );
+
+          const Tag = ({ type, active, text }) => {
+              if(!active) return null;
+              const colors = {
+                  bad: 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-900/30',
+                  good: 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-900/30',
+                  warn: 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-900/30',
+                  neutral: 'bg-gray-50 text-gray-500 border-gray-100 dark:bg-slate-800 dark:text-gray-400 dark:border-slate-700'
+              };
+              return (
+                  <span className={\`text-[10px] px-2 py-0.5 rounded border font-semibold \${colors[type]}\`}>
+                      {text}
+                  </span>
+              );
+          };
+
+          const getLocalTime = (tz) => {
+              if (!tz) return '未知';
+              try {
+                  return new Date().toLocaleTimeString('zh-CN', { timeZone: tz, hour: '2-digit', minute:'2-digit' });
+              } catch { return '未知'; }
+          };
+
+          return (
+              <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-700/50">
+                  <div className="grid grid-cols-2 gap-4 mb-5">
+                      <div className="bg-white/50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-700 rounded-lg p-3 text-center relative overflow-hidden group">
+                          <div className="relative z-10">
+                              <div className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold">运营商信誉</div>
+                              <div className={\`text-xl font-mono font-bold mt-1 \${companyScore > 20 ? 'text-rose-500 dark:text-rose-400' : 'text-emerald-500 dark:text-emerald-400'}\`}>
+                                  {companyScore}%
+                              </div>
+                          </div>
+                          <div className={\`absolute bottom-0 left-0 h-1 bg-current w-full opacity-20 \${companyScore > 20 ? 'text-rose-500' : 'text-emerald-500'}\`}></div>
+                      </div>
+                      <div className="bg-white/50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-700 rounded-lg p-3 text-center relative overflow-hidden group">
+                          <div className="relative z-10">
+                              <div className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold">ASN 信誉</div>
+                              <div className={\`text-xl font-mono font-bold mt-1 \${asnScore > 20 ? 'text-rose-500 dark:text-rose-400' : 'text-emerald-500 dark:text-emerald-400'}\`}>
+                                  {asnScore}%
+                              </div>
+                          </div>
+                          <div className={\`absolute bottom-0 left-0 h-1 bg-current w-full opacity-20 \${asnScore > 20 ? 'text-rose-500' : 'text-emerald-500'}\`}></div>
+                      </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 mb-5">
+                      <Tag type="bad" active={data.is_proxy} text="Proxy" />
+                      <Tag type="bad" active={data.is_vpn} text="VPN" />
+                      <Tag type="bad" active={data.is_tor} text="Tor" />
+                      <Tag type="bad" active={data.is_datacenter} text="Data Center" />
+                      <Tag type="bad" active={data.is_abuser} text="Abuser" />
+                      <Tag type="bad" active={data.is_bogon} text="Bogon" />
+                      <Tag type="good" active={data.is_mobile} text="Mobile ISP" />
+                      <Tag type="good" active={data.is_crawler} text="Search Engine" />
+                      <Tag type="neutral" active={!data.is_proxy && !data.is_datacenter} text="Low Risk" />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                      <InfoRow label="ASN 组织" value={data.asn?.org} sub={data.asn?.type} />
+                      <InfoRow label="路由段 (Route)" value={data.asn?.route} />
+                      <InfoRow label="注册局 (Registry)" value={data.asn?.registry} />
+                      <InfoRow label="所属公司" value={data.company?.name} sub={data.company?.domain} />
+                      <div className="col-span-2 mt-2 pt-2 border-t border-dashed border-gray-200 dark:border-gray-700">
+                           <div className="flex justify-between items-center mb-1">
+                              <span className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold">地理位置详情</span>
+                              <a href={\`https://www.google.com/maps/search/?api=1&query=\${data.location?.latitude},\${data.location?.longitude}\`} target="_blank" className="text-[10px] text-blue-500 dark:text-blue-400 hover:underline">Open Map ↗</a>
                            </div>
-                           <div className="w-px h-3 bg-gray-300 dark:bg-gray-600"></div>
-                           <div><span className="hidden sm:inline">TLS:</span> {window.CF_DATA.tls}</div>
-                           {conn && (
-                               <>
-                                  <div className="w-px h-3 bg-gray-300 dark:bg-gray-600"></div>
-                                  <div><span className="hidden sm:inline">Speed Level:</span> {conn.type.toUpperCase()}</div>
-                               </>
-                           )}
+                           <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 dark:text-gray-300">
+                              <div>
+                                  <span className="block text-[10px] text-gray-400 dark:text-gray-500">城市/地区</span>
+                                  {data.location?.city}, {data.location?.state}
+                              </div>
+                              <div>
+                                  <span className="block text-[10px] text-gray-400 dark:text-gray-500">时区 & 时间</span>
+                                  {data.location?.timezone} ({getLocalTime(data.location?.timezone)})
+                              </div>
+                           </div>
+                      </div>
+                  </div>
+              </div>
+          );
+      };
+
+      const IpCard = ({ title, type, delay = 0, accent }) => {
+          const [info, setInfo] = useState({ ip: 'Initializing...', status: 'loading' });
+          const [risk, setRisk] = useState(null);
+          const [loadRisk, setLoadRisk] = useState(false);
+
+          useEffect(() => {
+              const init = async () => {
+                  await new Promise(r => setTimeout(r, delay));
+                  let ip = null;
+
+                  try {
+                      if (type === 'domestic') {
+                          try {
+                              const r = await fetch('https://myip.ipip.net/json');
+                              const j = await r.json();
+                              ip = j.data.ip;
+                          } catch {
+                              try {
+                                  const r = await fetch('https://ipapi.co/json/');
+                                  const j = await r.json();
+                                  ip = j.ip;
+                              } catch {
+                                  ip = 'Error';
+                              }
+                          }
+                      } else if (type === 'foreign') {
+                          const r = await fetch('https://ipinfo.io/json');
+                          const j = await r.json();
+                          ip = j.ip;
+                      } else {
+                          const r = await fetch('https://api.ip.sb/jsonip');
+                          const j = await r.json();
+                          ip = j.ip;
+                      }
+
+                      setInfo({ ip: ip, status: 'ok' });
+                      
+                      if (ip && ip !== 'Error') {
+                          setLoadRisk(true);
+                          fetch(\`https://api.ipapi.is?q=\${ip}\`)
+                              .then(r => r.json())
+                              .then(d => {
+                                  setRisk(d);
+                                  setLoadRisk(false);
+                              })
+                              .catch(() => setLoadRisk(false));
+                      }
+                  } catch (e) {
+                      setInfo({ ip: 'Connection Failed', status: 'error' });
+                  }
+              };
+              init();
+          }, []);
+
+          const isErr = info.status === 'error';
+          const isLoading = info.status === 'loading';
+
+          return (
+              <div 
+                  className="glass-card rounded-2xl p-6 relative overflow-hidden animate-slide-up h-full flex flex-col"
+                  style={{ animationDelay: \`\${delay}ms\` }}
+              >
+                  <div className={\`absolute top-0 left-0 w-full h-1 bg-\${accent}-500\`}></div>
+                  <div className="scan-line"></div>
+                  
+                  <div className="flex justify-between items-start mb-3">
+                      <h3 className={\`text-xs font-bold uppercase tracking-widest flex items-center gap-2 text-\${accent}-600 dark:text-\${accent}-400\`}>
+                         <span className={\`w-2 h-2 rounded-full bg-\${accent}-500 shadow-neon\`}></span>
+                         {title}
+                      </h3>
+                      {isLoading && <div className="w-3 h-3 border-2 border-gray-300 dark:border-gray-600 border-t-transparent rounded-full animate-spin"></div>}
+                  </div>
+
+                  <div className="mb-2">
+                      {isLoading ? (
+                          <div className="h-8 w-3/4 bg-gray-100 dark:bg-gray-700 rounded animate-pulse"></div>
+                      ) : (
+                          <div className={\`text-2xl font-mono font-bold tracking-tight break-all \${isErr ? 'text-rose-500 dark:text-rose-400' : 'text-gray-800 dark:text-gray-100'}\`}>
+                              {info.ip}
+                          </div>
+                      )}
+                  </div>
+
+                  {!isErr && !isLoading && (
+                      <div className="flex-1">
+                          <RiskReport data={risk} loading={loadRisk} />
+                      </div>
+                  )}
+              </div>
+          );
+      };
+
+      const NetworkHeader = ({ theme, toggleTheme }) => {
+           const [conn, setConn] = useState(null);
+           useEffect(() => {
+               if (navigator.connection) {
+                   setConn({
+                       type: navigator.connection.effectiveType,
+                       rtt: navigator.connection.rtt,
+                       saveData: navigator.connection.saveData
+                   });
+               }
+           }, []);
+
+           return (
+               <header className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-slide-up">
+                   <div className="flex items-center gap-4">
+                       <div className="relative">
+                           <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-xl shadow-glass flex items-center justify-center text-primary relative z-10">
+                               <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                           </div>
+                           <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full"></div>
                        </div>
+                       <div>
+                           <h1 className="text-3xl font-bold text-gray-800 dark:text-white tracking-tight">IPcheck</h1>
+                           <p className="text-xs text-gray-500 dark:text-gray-400 font-mono flex items-center gap-2">
+                               <span>{window.CF_DATA.colo} • {window.CF_DATA.country}</span>
+                           </p>
+                       </div>
+                   </div>
+                   <div className="flex items-center gap-3">
+                     <button 
+                        onClick={toggleTheme}
+                        className="glass-card w-9 h-9 flex items-center justify-center rounded-full text-gray-600 dark:text-gray-300 hover:text-primary transition-colors"
+                     >
+                        {theme === 'dark' ? (
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+                        )}
+                     </button>
+                     <div className="glass-card px-4 py-2 rounded-full flex items-center gap-4 text-xs font-mono text-gray-600 dark:text-gray-300 shadow-sm">
+                         <div className="flex items-center gap-1.5">
+                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse-glow"></span>
+                             <span className="hidden sm:inline">Protocol:</span> {window.CF_DATA.http}
+                         </div>
+                         <div className="w-px h-3 bg-gray-300 dark:bg-gray-600"></div>
+                         <div><span className="hidden sm:inline">TLS:</span> {window.CF_DATA.tls}</div>
+                         {conn && (
+                             <>
+                                <div className="w-px h-3 bg-gray-300 dark:bg-gray-600"></div>
+                                <div><span className="hidden sm:inline">Net:</span> {conn.type.toUpperCase()}</div>
+                             </>
+                         )}
                      </div>
-                 </header>
-             );
-        };
-  
-        const Fingerprint = () => {
-             const [fp, setFp] = useState(null);
-             useEffect(() => {
-                 const getCanvas = () => {
-                     try {
-                        const c = document.createElement('canvas');
-                        const ctx = c.getContext('2d');
-                        ctx.fillText("Cloudflare", 2, 2);
-                        return c.toDataURL().slice(-10);
-                     } catch { return 'Err'; }
-                 };
-                 setFp({
-                     ua: navigator.userAgent,
-                     lang: navigator.language,
-                     platform: navigator.platform,
-                     cores: navigator.hardwareConcurrency || 'Unknown',
-                     memory: navigator.deviceMemory ? \`~\${navigator.deviceMemory}GB\` : 'Unknown',
-                     cookies: navigator.cookieEnabled ? 'Enabled' : 'Disabled',
-                     screen: \`\${window.screen.width}x\${window.screen.height} (\${window.screen.colorDepth}-bit)\`,
-                     gpu: (function() {
-                         try {
-                             const c = document.createElement('canvas');
-                             const gl = c.getContext('webgl') || c.getContext('experimental-webgl');
-                             const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-                             return debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'Unknown';
-                         } catch { return 'Unknown'; }
-                     })(),
-                     canvasHash: getCanvas()
-                 });
-             }, []);
-  
-             if(!fp) return null;
-  
-             const Item = ({ label, val, icon }) => (
-                 <div className="bg-gray-50/50 dark:bg-slate-800/50 rounded-lg p-2.5 border border-gray-100 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 transition-colors">
-                     <div className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold mb-1 flex items-center gap-1">
-                        {icon && <span>{icon}</span>}
-                        {label}
-                     </div>
-                     <div className="text-xs font-mono text-gray-700 dark:text-gray-300 break-words font-medium">{val}</div>
-                 </div>
-             );
-  
-             return (
-                 <div className="glass-card rounded-2xl p-6 relative overflow-hidden animate-slide-up" style={{ animationDelay: '600ms' }}>
-                     <h3 className="text-sm font-bold text-gray-600 dark:text-gray-300 uppercase tracking-widest mb-4 flex items-center gap-2">
-                         <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.131A8 8 0 008 2.855" /></svg>
-                         指纹检测
-                     </h3>
-                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                         <div className="col-span-2 md:col-span-4"><Item label="User Agent" val={fp.ua} /></div>
-                         <Item label="GPU 渲染器" val={fp.gpu} />
-                         <Item label="系统平台" val={fp.platform} />
-                         <Item label="CPU 核心" val={fp.cores} />
-                         <Item label="设备内存" val={fp.memory} />
-                         <Item label="屏幕参数" val={fp.screen} />
-                         <Item label="系统语言" val={fp.lang} />
-                         <Item label="Cookies" val={fp.cookies} />
-                         <Item label="Canvas Hash" val={fp.canvasHash} />
-                     </div>
-                 </div>
-             );
-        };
-  
-        const App = () => {
-            const [theme, setTheme] = useState(() => {
-                if (typeof localStorage !== 'undefined' && localStorage.getItem('theme')) {
-                    return localStorage.getItem('theme');
-                }
-                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    return 'dark';
-                }
-                return 'light';
-            });
-  
-            useLayoutEffect(() => {
-                const root = window.document.documentElement;
-                if (theme === 'dark') {
-                    root.classList.add('dark');
-                } else {
-                    root.classList.remove('dark');
-                }
-                localStorage.setItem('theme', theme);
-            }, [theme]);
-  
-            const toggleTheme = () => {
-                setTheme(t => t === 'dark' ? 'light' : 'dark');
-            };
-  
-            return (
-                <div className="pt-2">
-                    <NetworkHeader theme={theme} toggleTheme={toggleTheme} />
-  
-                    <section className="mb-8 animate-slide-up" style={{ animationDelay: '100ms' }}>
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                            <PingCard index={0} name="Bilibili" url="https://i0.hdslb.com/bfs/face/member/noface.jpg" icon="https://www.bilibili.com/favicon.ico" />
-                            <PingCard index={1} name="WeChat" url="https://res.wx.qq.com/a/wx_fed/assets/res/NTI4MWU5.ico" icon="https://res.wx.qq.com/a/wx_fed/assets/res/NTI4MWU5.ico" />
-                            <PingCard index={2} name="Google" url="https://www.google.com/favicon.ico" icon="https://www.google.com/favicon.ico" />
-                            <PingCard index={3} name="Cloudflare" url="https://www.cloudflare.com/favicon.ico" icon="https://www.cloudflare.com/favicon.ico" />
-                            <PingCard index={4} name="GitHub" url="https://github.github.io/janky/images/bg_hr.png" icon="https://github.com/favicon.ico" />
-                            <PingCard index={5} name="YouTube" url="https://i.ytimg.com/vi/M7lc1UVf-VE/mqdefault.jpg" icon="https://www.youtube.com/favicon.ico" />
-                            <PingCard index={6} name="OpenAI" url="https://openai.com/favicon.ico" icon="https://openai.com/favicon.ico" />
-                            <PingCard index={7} name="Telegram" url="https://telegram.org/img/t_logo.png" icon="https://telegram.org/favicon.ico" />
-                            <PingCard index={8} name="Netflix" url="https://assets.nflxext.com/us/ffe/siteui/common/icons/nficon2016.ico" icon="https://assets.nflxext.com/us/ffe/siteui/common/icons/nficon2016.ico" />
-                            <PingCard index={9} name="Apple" url="https://www.apple.com/favicon.ico" icon="https://www.apple.com/favicon.ico" />
-                        </div>
-                    </section>
-  
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 animate-slide-up" style={{ animationDelay: '200ms' }}>
-                        <DualStackCard type="v4" color="blue" />
-                        <DualStackCard type="v6" color="purple" />
-                    </div>
-  
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                        <IpCard title="国内出口" type="domestic" delay={300} accent="blue" />
-                        <IpCard title="国外出口" type="foreign" delay={400} accent="amber" />
-                        <IpCard title="Cloudflare" type="cloudflare" delay={500} accent="primary" />
-                    </div>
-  
-                    <Fingerprint />
-  
-                    <footer className="text-center text-gray-400 dark:text-gray-600 text-[10px] py-6 font-mono border-t border-gray-200/50 dark:border-gray-800 mt-12">
-                        <p className="flex justify-center items-center gap-2">
-                           <span><a href="https://github.com/jianmo250/IPcheck-workers">IPcheck-workers</a></span>
-                           <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-700"></span>
-                        </p>
-                    </footer>
-                </div>
-            );
-        };
-  
-        const DualStackCard = ({ type, color }) => {
-            const [ip, setIp] = useState(null);
-  
-            useEffect(() => {
-                const getIp = async () => {
-                    const sources = type === 'v4' 
-                        ? [
-                            { url: 'https://api.ipify.org?format=json', key: 'ip' },
-                            { url: 'https://api-ipv4.ip.sb/jsonip', key: 'ip' },
-                            { url: 'https://myip.ipip.net/json', key: 'data.ip' },
-                            { url: 'https://ipv4.icanhazip.com', format: 'text' }
-                          ]
-                        : [
-                            { url: 'https://api6.ipify.org?format=json', key: 'ip' },
-                            { url: 'https://api-ipv6.ip.sb/jsonip', key: 'ip' },
-                            { url: 'https://ipv6.icanhazip.com', format: 'text' }
-                          ];
-  
-                    for (const source of sources) {
-                        try {
-                            const controller = new AbortController();
-                            const id = setTimeout(() => controller.abort(), 2000);
-                            
-                            const res = await fetch(source.url, { signal: controller.signal });
-                            clearTimeout(id);
-                            
-                            if (res.ok) {
-                                let result;
-                                if (source.format === 'text') {
-                                    result = await res.text();
-                                } else {
-                                    const json = await res.json();
-                                    result = source.key.includes('.') 
-                                        ? source.key.split('.').reduce((o, k) => (o || {})[k], json)
-                                        : json[source.key];
-                                }
-                                
-                                if (result) {
-                                    setIp(result.trim());
-                                    return;
-                                }
-                            }
-                        } catch (e) {
-                            continue;
-                        }
-                    }
-                    setIp('N/A');
-                };
-  
-                getIp();
-            }, [type]);
-  
-            const borderColor = color === 'blue' ? 'border-blue-500' : 'border-purple-500';
-            const label = type === 'v4' ? 'IPv4 Connectivity' : 'IPv6 Connectivity';
-  
-            return (
-                <div className={\`glass-card border-l-[3px] \${borderColor} rounded-r-xl p-4 flex items-center justify-between relative overflow-hidden group\`}>
-                    <div className="z-10">
-                        <div className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider mb-1">{label}</div>
-                        <div className="font-mono font-bold text-gray-800 dark:text-gray-100 text-sm break-all">
-                            {ip || <span className="animate-pulse bg-gray-200 dark:bg-gray-700 text-transparent rounded">Loading IP Address...</span>}
-                        </div>
-                    </div>
-                    <div className={\`absolute -right-4 -bottom-4 w-24 h-24 bg-\${color}-400/10 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500\`}></div>
-                </div>
-            );
-        };
-  
-        const root = createRoot(document.getElementById('root'));
-        root.render(<App />);
-      </script>
-    </body>
-  </html>
-    `;
-  }
+                   </div>
+               </header>
+           );
+      };
+
+      const Fingerprint = () => {
+           const [fp, setFp] = useState(null);
+           useEffect(() => {
+               const getCanvas = () => {
+                   try {
+                      const c = document.createElement('canvas');
+                      const ctx = c.getContext('2d');
+                      ctx.fillText("Cloudflare", 2, 2);
+                      return c.toDataURL().slice(-10);
+                   } catch { return 'Err'; }
+               };
+               setFp({
+                   ua: navigator.userAgent,
+                   lang: navigator.language,
+                   platform: navigator.platform,
+                   cores: navigator.hardwareConcurrency || 'Unknown',
+                   memory: navigator.deviceMemory ? \`~\${navigator.deviceMemory}GB\` : 'Unknown',
+                   cookies: navigator.cookieEnabled ? 'Enabled' : 'Disabled',
+                   screen: \`\${window.screen.width}x\${window.screen.height} (\${window.screen.colorDepth}-bit)\`,
+                   gpu: (function() {
+                       try {
+                           const c = document.createElement('canvas');
+                           const gl = c.getContext('webgl') || c.getContext('experimental-webgl');
+                           const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                           return debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'Unknown';
+                       } catch { return 'Unknown'; }
+                   })(),
+                   canvasHash: getCanvas()
+               });
+           }, []);
+
+           if(!fp) return null;
+
+           const Item = ({ label, val, icon }) => (
+               <div className="bg-gray-50/50 dark:bg-slate-800/50 rounded-lg p-2.5 border border-gray-100 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 transition-colors">
+                   <div className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold mb-1 flex items-center gap-1">
+                      {icon && <span>{icon}</span>}
+                      {label}
+                   </div>
+                   <div className="text-xs font-mono text-gray-700 dark:text-gray-300 break-words font-medium">{val}</div>
+               </div>
+           );
+
+           return (
+               <div className="glass-card rounded-2xl p-6 relative overflow-hidden animate-slide-up" style={{ animationDelay: '600ms' }}>
+                   <h3 className="text-sm font-bold text-gray-600 dark:text-gray-300 uppercase tracking-widest mb-4 flex items-center gap-2">
+                       <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.131A8 8 0 008 2.855" /></svg>
+                       指纹检测
+                   </h3>
+                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                       <div className="col-span-2 md:col-span-4"><Item label="User Agent" val={fp.ua} /></div>
+                       <Item label="GPU 渲染器" val={fp.gpu} />
+                       <Item label="系统平台" val={fp.platform} />
+                       <Item label="CPU 核心" val={fp.cores} />
+                       <Item label="设备内存" val={fp.memory} />
+                       <Item label="屏幕参数" val={fp.screen} />
+                       <Item label="系统语言" val={fp.lang} />
+                       <Item label="Cookies" val={fp.cookies} />
+                       <Item label="Canvas Hash" val={fp.canvasHash} />
+                   </div>
+               </div>
+           );
+      };
+
+      const App = () => {
+          // 3. 修改：初始化时直接读取 HTML 类名，确保同步
+          const [theme, setTheme] = useState(() => {
+              if (typeof document !== 'undefined' && document.documentElement.classList.contains('dark')) {
+                  return 'dark';
+              }
+              return 'light';
+          });
+
+          useLayoutEffect(() => {
+              const root = window.document.documentElement;
+              if (theme === 'dark') {
+                  root.classList.add('dark');
+              } else {
+                  root.classList.remove('dark');
+              }
+              localStorage.setItem('theme', theme);
+          }, [theme]);
+
+          const toggleTheme = () => {
+              setTheme(t => t === 'dark' ? 'light' : 'dark');
+          };
+
+          return (
+              <div className="pt-2">
+                  <NetworkHeader theme={theme} toggleTheme={toggleTheme} />
+
+                  <section className="mb-8 animate-slide-up" style={{ animationDelay: '100ms' }}>
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                          <PingCard index={0} name="Bilibili" url="https://i0.hdslb.com/bfs/face/member/noface.jpg" icon="https://www.bilibili.com/favicon.ico" />
+                          <PingCard index={1} name="WeChat" url="https://res.wx.qq.com/a/wx_fed/assets/res/NTI4MWU5.ico" icon="https://res.wx.qq.com/a/wx_fed/assets/res/NTI4MWU5.ico" />
+                          <PingCard index={2} name="Google" url="https://www.google.com/favicon.ico" icon="https://www.google.com/favicon.ico" />
+                          <PingCard index={3} name="Cloudflare" url="https://www.cloudflare.com/favicon.ico" icon="https://www.cloudflare.com/favicon.ico" />
+                          <PingCard index={4} name="GitHub" url="https://github.github.io/janky/images/bg_hr.png" icon="https://github.com/favicon.ico" />
+                          <PingCard index={5} name="YouTube" url="https://i.ytimg.com/vi/M7lc1UVf-VE/mqdefault.jpg" icon="https://www.youtube.com/favicon.ico" />
+                          <PingCard index={6} name="OpenAI" url="https://openai.com/favicon.ico" icon="https://openai.com/favicon.ico" />
+                          <PingCard index={7} name="Telegram" url="https://telegram.org/img/t_logo.png" icon="https://telegram.org/favicon.ico" />
+                          <PingCard index={8} name="Netflix" url="https://assets.nflxext.com/us/ffe/siteui/common/icons/nficon2016.ico" icon="https://assets.nflxext.com/us/ffe/siteui/common/icons/nficon2016.ico" />
+                          <PingCard index={9} name="Apple" url="https://www.apple.com/favicon.ico" icon="https://www.apple.com/favicon.ico" />
+                      </div>
+                  </section>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 animate-slide-up" style={{ animationDelay: '200ms' }}>
+                      <DualStackCard type="v4" color="blue" />
+                      <DualStackCard type="v6" color="purple" />
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                      <IpCard title="国内出口" type="domestic" delay={300} accent="blue" />
+                      <IpCard title="国外出口" type="foreign" delay={400} accent="amber" />
+                      <IpCard title="Cloudflare" type="cloudflare" delay={500} accent="primary" />
+                  </div>
+
+                  <Fingerprint />
+
+                  <footer className="text-center text-gray-400 dark:text-gray-600 text-[10px] py-6 font-mono border-t border-gray-200/50 dark:border-gray-800 mt-12">
+                      <p className="flex justify-center items-center gap-2">
+                         <span><a href="https://github.com/jianmo250/IPcheck-workers">IPcheck-workers</a></span>
+                         <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-700"></span>
+                      </p>
+                  </footer>
+              </div>
+          );
+      };
+
+      const DualStackCard = ({ type, color }) => {
+          const [ip, setIp] = useState(null);
+
+          useEffect(() => {
+              const getIp = async () => {
+                  const sources = type === 'v4' 
+                      ? [
+                          { url: 'https://api.ipify.org?format=json', key: 'ip' },
+                          { url: 'https://api-ipv4.ip.sb/jsonip', key: 'ip' },
+                          { url: 'https://myip.ipip.net/json', key: 'data.ip' },
+                          { url: 'https://ipv4.icanhazip.com', format: 'text' }
+                        ]
+                      : [
+                          { url: 'https://api6.ipify.org?format=json', key: 'ip' },
+                          { url: 'https://api-ipv6.ip.sb/jsonip', key: 'ip' },
+                          { url: 'https://ipv6.icanhazip.com', format: 'text' }
+                        ];
+
+                  for (const source of sources) {
+                      try {
+                          const controller = new AbortController();
+                          const id = setTimeout(() => controller.abort(), 2000);
+                          
+                          const res = await fetch(source.url, { signal: controller.signal });
+                          clearTimeout(id);
+                          
+                          if (res.ok) {
+                              let result;
+                              if (source.format === 'text') {
+                                  result = await res.text();
+                              } else {
+                                  const json = await res.json();
+                                  result = source.key.includes('.') 
+                                      ? source.key.split('.').reduce((o, k) => (o || {})[k], json)
+                                      : json[source.key];
+                              }
+                              
+                              if (result) {
+                                  setIp(result.trim());
+                                  return;
+                              }
+                          }
+                      } catch (e) {
+                          continue;
+                      }
+                  }
+                  setIp('N/A');
+              };
+
+              getIp();
+          }, [type]);
+
+          const borderColor = color === 'blue' ? 'border-blue-500' : 'border-purple-500';
+          const label = type === 'v4' ? 'IPv4 Connectivity' : 'IPv6 Connectivity';
+
+          return (
+              <div className={\`glass-card border-l-[3px] \${borderColor} rounded-r-xl p-4 flex items-center justify-between relative overflow-hidden group\`}>
+                  <div className="z-10">
+                      <div className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider mb-1">{label}</div>
+                      <div className="font-mono font-bold text-gray-800 dark:text-gray-100 text-sm break-all">
+                          {ip || <span className="animate-pulse bg-gray-200 dark:bg-gray-700 text-transparent rounded">Loading IP Address...</span>}
+                      </div>
+                  </div>
+                  <div className={\`absolute -right-4 -bottom-4 w-24 h-24 bg-\${color}-400/10 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500\`}></div>
+              </div>
+          );
+      };
+
+      const root = createRoot(document.getElementById('root'));
+      root.render(<App />);
+    </script>
+  </body>
+</html>
+  `;
+}
