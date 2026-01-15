@@ -96,7 +96,6 @@ function renderHtml(cfData) {
       }
     </script>
     <style>
-      /* 2. 优化：设置 html 背景色，防止边缘白边 */
       html {
         background-color: #f0f4f8;
       }
